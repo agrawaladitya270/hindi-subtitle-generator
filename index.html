@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hindi Subs</title>
+<meta name="description" content="Make Hindi subtitles (.srt) for any movie, right in your browser. The movie never leaves your computer.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23e8590c'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='white' font-family='sans-serif'>अ</text></svg>">
+<!-- Lets the speech-to-text use all CPU cores on GitHub Pages (needs cross-origin isolation). -->
+<script src="coi-serviceworker.js"></script>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <h1><span class="mark">अ</span> Hindi Subs</h1>
+    <p class="lead">Make Hindi subtitles (.srt) for any movie. Everything runs in your browser&nbsp;— the movie never leaves your computer.</p>
+  </header>
+
+  <section class="card" id="pick">
+    <label class="drop" id="drop">
+      <input id="file" type="file" accept="video/*,audio/*,.mkv,.avi,.ts,.m2ts,.srt,.vtt">
+      <span class="drop-title">Choose a movie <span class="muted">or drop it here</span></span>
+      <span class="muted small">mp4, mkv, avi, mp3… or an existing .srt to translate</span>
+    </label>
+
+    <div id="fileinfo" class="fileinfo" hidden></div>
+
+    <div id="options" class="options">
+      <label>Whisper model
+        <select id="model"></select>
+      </label>
+      <label>Audio language
+        <select id="lang"><option value="">Auto-detect</option></select>
+      </label>
+      <label>Audio track
+        <select id="track"><option value="0">1st track</option></select>
+      </label>
+      <label class="check"><input type="checkbox" id="cpu"> Don’t use the GPU</label>
+    </div>
+    <p id="device" class="muted small"></p>
+
+    <button id="start" class="primary" disabled>Make Hindi subtitles</button>
+  </section>
+
+  <section class="card" id="work" hidden>
+    <ol class="steps" id="steps">
+      <li data-step="model">Load Whisper</li>
+      <li data-step="asr">Speech-to-text</li>
+      <li data-step="tr">Translate to Hindi</li>
+    </ol>
+    <div class="bar"><div id="bar"></div></div>
+    <p id="status" class="status"></p>
+    <div id="downloads" class="downloads"></div>
+    <div class="row">
+      <button id="stop">Stop</button>
+      <button id="retry" hidden>Retry translation</button>
+    </div>
+    <details>
+      <summary>Log</summary>
+      <pre id="log"></pre>
+    </details>
+  </section>
+
+  <section class="card" id="preview" hidden>
+    <h2>Preview</h2>
+    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Original</th><th>Hindi</th></tr></thead><tbody id="rows"></tbody></table></div>
+  </section>
+
+  <section class="how">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Whisper</b> (speech-to-text) writes timed lines in the movie’s own language.</li>
+      <li>Each line is translated to Hindi with <b>Google Translate</b> (free, needs internet). Only the subtitle text is sent.</li>
+      <li>You get <code>&lt;movie&gt;.hi.srt</code>. Put it next to the movie with the same name and your player picks it up.</li>
+    </ol>
+    <h3>Tips</h3>
+    <ul>
+      <li>Use <b>Chrome or Edge on a computer with a graphics card</b>: speech-to-text on the GPU is many times faster than on the CPU.</li>
+      <li>The model downloads once (0.3–2 GB) and is cached for next time.</li>
+      <li>Keep this tab open until it finishes. A 2-hour movie takes about 10 min on a gaming graphics card (large-v3-turbo), under an hour on built-in laptop graphics (small), and hours on the CPU alone.</li>
+      <li>Laptop with two graphics chips? In Windows Settings › System › Display › Graphics, set Chrome or Edge to <i>High performance</i>.</li>
+      <li>Wrong language detected? Pick it under <i>Audio language</i>. Dual-audio file? Pick the track.</li>
+      <li>Already have English subtitles? Drop the <code>.srt</code> to skip speech-to-text. It only takes seconds.</li>
+    </ul>
+    <p class="muted small">Prefer the command line? <a href="https://github.com/agrawaladitya270/hindi-subs/blob/main/hindi_subs.py">hindi_subs.py</a> does the same on your PC (uses an NVIDIA GPU if you have one). · <a href="https://github.com/agrawaladitya270/hindi-subs">Source on GitHub</a></p>
+  </section>
+</main>
+</body>
+</html>
