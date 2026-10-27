@@ -74,13 +74,9 @@ a { color: inherit; }
 .icon-link { color: var(--muted); display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; }
 .icon-link:hover { color: var(--text); background: var(--surface-2); }
 
-/* hero */
-.hero { padding: 56px 0 28px; }
-.hero h1 { margin: 0; font-size: clamp(28px, 5vw, 38px); line-height: 1.15; font-weight: 650; letter-spacing: -.025em; }
-.hero p { margin: 10px 0 0; color: var(--muted); font-size: 16px; }
-
 /* panels */
 main { flex: 1; }
+main.wrap { padding-top: 40px; }
 .panel {
   background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
   padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);
@@ -210,7 +206,8 @@ select:disabled { opacity: .55; cursor: default; }
 .dl-icon { flex: none; color: var(--muted); display: grid; }
 .dl.main .dl-icon { color: var(--accent); }
 
-.actions { display: flex; gap: 8px; margin-top: 18px; }
+.actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 18px; }
+.note { color: var(--muted); font-size: 13px; }
 .actions:not(:has(.btn:not([hidden]))) { display: none; }
 
 .details { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
@@ -236,7 +233,7 @@ td:nth-child(3) { font-family: "Nirmala UI", "Noto Sans Devanagari", "Inter", sy
 .foot a:hover { color: var(--text); }
 
 @media (max-width: 600px) {
-  .hero { padding: 36px 0 20px; }
+  main.wrap { padding-top: 20px; }
   .panel { padding: 16px; border-radius: 14px; }
   .fields { grid-template-columns: 1fr; }
   .drop { padding: 32px 16px; }

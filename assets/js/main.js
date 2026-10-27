@@ -396,6 +396,7 @@ async function run(retryTranslation = false) {
 function setBusy(busy) {
   $("work").hidden = false;
   $("stop").hidden = !busy;
+  $("keepopen").hidden = !busy;
   $("start").disabled = busy || !file;
   $("file").disabled = busy;
   $("change").disabled = busy;
@@ -496,7 +497,13 @@ async function init() {
   $("start").addEventListener("click", () => run());
   $("retry").addEventListener("click", () => run(true));
   $("stop").addEventListener("click", () => job?.abort());
-  window.addEventListener("beforeunload", (e) => { if (job) e.preventDefault(); });
+  // Ask before closing or leaving while a job runs; if the page does go, stop the job.
+  window.addEventListener("beforeunload", (e) => {
+    if (!job) return;
+    e.preventDefault();
+    e.returnValue = "";  // older browsers need this to show the prompt
+  });
+  window.addEventListener("pagehide", () => job?.abort());
 }
 
 init();
