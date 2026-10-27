@@ -1,4 +1,4 @@
-// Speech-to-text in a background thread (step 1 of hindi_subs.py), using Whisper via transformers.js.
+// Speech-to-text in a background thread (step 1 of cli/hindi_subtitles.py), using Whisper via transformers.js.
 import { pipeline, env } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/dist/transformers.min.js";
 
 env.allowLocalModels = false;

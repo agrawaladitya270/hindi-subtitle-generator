@@ -3,89 +3,103 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hindi Subs</title>
-<meta name="description" content="Make Hindi subtitles (.srt) for any movie, right in your browser. The movie never leaves your computer.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23e8590c'/><text x='50' y='70' font-size='56' text-anchor='middle' fill='white' font-family='sans-serif'>अ</text></svg>">
-<!-- Lets the speech-to-text use all CPU cores on GitHub Pages (needs cross-origin isolation). -->
+<title>Hindi Subtitle Generator</title>
+<meta name="description" content="Hindi subtitles for any movie. Speech recognition runs in your browser; your movie never leaves your device.">
+<meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0b0c" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23ea580c'/><text x='32' y='45' font-size='36' text-anchor='middle' fill='white' font-family='sans-serif'>अ</text></svg>">
+<!-- Lets speech recognition use all CPU cores on GitHub Pages (needs cross-origin isolation). -->
 <script src="coi-serviceworker.js"></script>
-<link rel="stylesheet" href="style.css">
-<script type="module" src="app.js"></script>
+<link rel="preload" href="assets/fonts/inter-variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/css/styles.css">
+<script type="module" src="assets/js/main.js"></script>
 </head>
 <body>
-<main>
-  <header>
-    <h1><span class="mark">अ</span> Hindi Subs</h1>
-    <p class="lead">Make Hindi subtitles (.srt) for any movie. Everything runs in your browser&nbsp;— the movie never leaves your computer.</p>
-  </header>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="./"><span class="logo">अ</span>Hindi Subtitle Generator</a>
+    <a class="icon-link" href="https://github.com/agrawaladitya270/hindi-subtitle-generator" aria-label="Source code on GitHub" title="Source code on GitHub">
+      <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
+  </div>
+</header>
 
-  <section class="card" id="pick">
-    <label class="drop" id="drop">
-      <input id="file" type="file" accept="video/*,audio/*,.mkv,.avi,.ts,.m2ts,.srt,.vtt">
-      <span class="drop-title">Choose a movie <span class="muted">or drop it here</span></span>
-      <span class="muted small">mp4, mkv, avi, mp3… or an existing .srt to translate</span>
-    </label>
-
-    <div id="fileinfo" class="fileinfo" hidden></div>
-
-    <div id="options" class="options">
-      <label>Whisper model
-        <select id="model"></select>
-      </label>
-      <label>Audio language
-        <select id="lang"><option value="">Auto-detect</option></select>
-      </label>
-      <label>Audio track
-        <select id="track"><option value="0">1st track</option></select>
-      </label>
-      <label class="check"><input type="checkbox" id="cpu"> Don’t use the GPU</label>
-    </div>
-    <p id="device" class="muted small"></p>
-
-    <button id="start" class="primary" disabled>Make Hindi subtitles</button>
+<main class="wrap">
+  <section class="hero">
+    <h1>Hindi subtitles for any movie</h1>
+    <p>Speech recognition runs in your browser. Your movie never leaves your device.</p>
   </section>
 
-  <section class="card" id="work" hidden>
-    <ol class="steps" id="steps">
-      <li data-step="model">Load Whisper</li>
-      <li data-step="asr">Speech-to-text</li>
-      <li data-step="tr">Translate to Hindi</li>
-    </ol>
-    <div class="bar"><div id="bar"></div></div>
-    <p id="status" class="status"></p>
-    <div id="downloads" class="downloads"></div>
-    <div class="row">
-      <button id="stop">Stop</button>
-      <button id="retry" hidden>Retry translation</button>
+  <section class="panel" id="pick">
+    <label class="drop" id="drop">
+      <input id="file" type="file" accept="video/*,audio/*,.mkv,.avi,.ts,.m2ts,.srt,.vtt">
+      <span class="drop-icon">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+      </span>
+      <span class="drop-title">Drop a movie or subtitle file</span>
+      <span class="drop-sub">or <span class="u">browse</span> · MP4, MKV, AVI, MP3, SRT</span>
+    </label>
+
+    <div class="file" id="filerow" hidden>
+      <span class="file-icon">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>
+      </span>
+      <div class="file-text">
+        <div class="file-name" id="fname"></div>
+        <div class="file-meta" id="fmeta"></div>
+      </div>
+      <button class="btn ghost small" id="change" type="button">Change</button>
     </div>
-    <details>
-      <summary>Log</summary>
+
+    <div id="options" hidden>
+      <div class="fields">
+        <label class="field"><span>Model</span><select id="model"></select></label>
+        <label class="field"><span>Spoken language</span><select id="lang"><option value="">Auto-detect</option></select></label>
+        <label class="field"><span>Audio track</span><select id="track"></select></label>
+      </div>
+      <div class="device">
+        <label class="switch" id="gpuswitch"><input type="checkbox" id="gpu"><span class="knob"></span>GPU acceleration</label>
+        <span class="chip" id="device"></span>
+      </div>
+    </div>
+
+    <button id="start" class="btn primary" type="button" disabled hidden>Generate Hindi subtitles</button>
+  </section>
+
+  <section class="panel" id="work" hidden>
+    <ol class="steps">
+      <li data-step="model">Load model</li>
+      <li data-step="asr">Transcribe</li>
+      <li data-step="tr">Translate</li>
+    </ol>
+    <div class="progress-head">
+      <span id="status"></span>
+      <span id="side" class="side"></span>
+    </div>
+    <div class="bar"><div id="bar"></div></div>
+    <p class="quote" id="quote" hidden></p>
+    <div class="downloads" id="downloads"></div>
+    <div class="actions">
+      <button class="btn" id="stop" type="button">Cancel</button>
+      <button class="btn" id="retry" type="button" hidden>Retry translation</button>
+    </div>
+    <details class="details">
+      <summary>Details</summary>
       <pre id="log"></pre>
     </details>
   </section>
 
-  <section class="card" id="preview" hidden>
-    <h2>Preview</h2>
-    <div class="table-wrap"><table><thead><tr><th>Time</th><th>Original</th><th>Hindi</th></tr></thead><tbody id="rows"></tbody></table></div>
-  </section>
-
-  <section class="how">
-    <h2>How it works</h2>
-    <ol>
-      <li><b>Whisper</b> (speech-to-text) writes timed lines in the movie’s own language.</li>
-      <li>Each line is translated to Hindi with <b>Google Translate</b> (free, needs internet). Only the subtitle text is sent.</li>
-      <li>You get <code>&lt;movie&gt;.hi.srt</code>. Put it next to the movie with the same name and your player picks it up.</li>
-    </ol>
-    <h3>Tips</h3>
-    <ul>
-      <li>Use <b>Chrome or Edge on a computer with a graphics card</b>: speech-to-text on the GPU is many times faster than on the CPU.</li>
-      <li>The model downloads once (0.3–2 GB) and is cached for next time.</li>
-      <li>Keep this tab open until it finishes. A 2-hour movie takes about 10 min on a gaming graphics card (large-v3-turbo), under an hour on built-in laptop graphics (small), and hours on the CPU alone.</li>
-      <li>Laptop with two graphics chips? In Windows Settings › System › Display › Graphics, set Chrome or Edge to <i>High performance</i>.</li>
-      <li>Wrong language detected? Pick it under <i>Audio language</i>. Dual-audio file? Pick the track.</li>
-      <li>Already have English subtitles? Drop the <code>.srt</code> to skip speech-to-text. It only takes seconds.</li>
-    </ul>
-    <p class="muted small">Prefer the command line? <a href="https://github.com/agrawaladitya270/hindi-subs/blob/main/hindi_subs.py">hindi_subs.py</a> does the same on your PC (uses an NVIDIA GPU if you have one). · <a href="https://github.com/agrawaladitya270/hindi-subs">Source on GitHub</a></p>
+  <section class="panel" id="preview" hidden>
+    <div class="panel-head"><h2>Preview</h2><span class="side" id="count"></span></div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Time</th><th>Original</th><th>Hindi</th></tr></thead><tbody id="rows"></tbody></table>
+    </div>
   </section>
 </main>
+
+<footer class="wrap foot">
+  <span>Hindi Subtitle Generator</span>
+  <a href="https://github.com/agrawaladitya270/hindi-subtitle-generator">GitHub</a>
+</footer>
 </body>
 </html>

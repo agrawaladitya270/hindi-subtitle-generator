@@ -1,58 +1,77 @@
-# Hindi Subs
+# Hindi Subtitle Generator
 
-Make Hindi subtitles (`.srt`) for any movie.
+Generate Hindi subtitles (`.srt`) for any movie, in the browser or from the command line.
 
-**Website: https://agrawaladitya270.github.io/hindi-subs/**
+**Live site:** https://agrawaladitya270.github.io/hindi-subtitle-generator/
 
-Open the site, choose a movie (or an existing `.srt`), and download `<movie>.hi.srt`.
-Everything runs in your browser. The movie is never uploaded; only the subtitle text is sent to Google Translate.
+## Features
+
+- **Private by design.** Speech recognition runs locally in the browser; the movie is never uploaded. Only subtitle text is sent to Google Translate.
+- **Whisper speech recognition** with four model sizes (Small, Medium, Large v3 Turbo, Large v3), GPU-accelerated through WebGPU with automatic CPU fallback.
+- **Any movie file.** MP4, MKV, AVI, MP3 and more via ffmpeg.wasm, including multi-track audio and AC-3.
+- **Existing subtitles.** Drop an `.srt` to translate it directly.
+- **Player-ready output.** Two lines per cue, 42 characters per line, UTF-8 with BOM. The original-language `.srt` is saved as well.
 
 ## How it works
 
-1. **Whisper** (speech-to-text) writes timed lines in the movie's own language.
-2. Each line is translated to Hindi with **Google Translate** (free, needs internet).
-3. The result is saved as `<movie>.hi.srt`. The original-language `<movie>.<lang>.srt` is offered too.
+1. Whisper transcribes the selected audio track into timed lines in the spoken language.
+2. Each line is translated to Hindi with Google Translate.
+3. The result is saved as `<movie>.hi.srt`, alongside `<movie>.<lang>.srt`.
 
-The website and the Python script do the same steps with the same settings:
+## Performance
 
-| | Website | `hindi_subs.py` |
+| Hardware | Model | 2-hour movie |
 |---|---|---|
-| Runs on | your browser (WebGPU, or CPU) | your PC (NVIDIA GPU, or CPU) |
-| Speech-to-text | Whisper via [transformers.js](https://github.com/huggingface/transformers.js) | Whisper via [faster-whisper](https://github.com/SYSTRAN/faster-whisper) |
-| Reads audio with | [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) | PyAV |
-| Models | small, medium, large-v3-turbo, large-v3 | same |
-| Options | audio language, audio track, don't use GPU | `--lang`, `--track`, `--cpu` |
-| Translate an existing `.srt` | drop it on the page | `python hindi_subs.py movie.en.srt` |
+| Dedicated GPU (RTX 4060 Laptop) | Large v3 Turbo | ~10 min (~12× real time) |
+| Integrated GPU (Intel UHD) | Small | ~40 min (~3× real time) |
+| CPU only | Small | several hours |
 
-### Speed (2-hour movie)
+Chrome or Edge is recommended. Models are downloaded once (0.3–2 GB) and cached by the browser.
 
-- Gaming graphics card, `large-v3-turbo`: about 10 min (measured ~12× real time on an RTX 4060 laptop GPU)
-- Built-in laptop graphics, `small`: under an hour (~3× real time on Intel UHD)
-- CPU only: hours. Use `small`, or the Python script.
+## Command-line tool
 
-Use Chrome or Edge. On a laptop with two graphics chips, set the browser to *High performance* in
-Windows Settings › System › Display › Graphics. The model downloads once (0.3–2 GB) and is cached.
-
-## Command line
+`cli/hindi_subtitles.py` runs the same pipeline natively with [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (CUDA or CPU).
 
 ```
 pip install faster-whisper deep-translator
 
-python hindi_subs.py movie.mp4                 # audio -> Hindi subtitles
-python hindi_subs.py movie.mp4 --lang ja       # set audio language if auto-detect is wrong
-python hindi_subs.py movie.mp4 --model small   # much faster on CPU, less accurate
-python hindi_subs.py movie.mkv --track 1       # use the 2nd audio track (dual-audio files)
-python hindi_subs.py movie.en.srt              # translate an existing .srt (no speech-to-text)
+python cli/hindi_subtitles.py movie.mp4                 # audio -> Hindi subtitles
+python cli/hindi_subtitles.py movie.mp4 --lang ja       # set audio language if auto-detect is wrong
+python cli/hindi_subtitles.py movie.mp4 --model small   # much faster on CPU, less accurate
+python cli/hindi_subtitles.py movie.mkv --track 1       # use the 2nd audio track (dual-audio files)
+python cli/hindi_subtitles.py movie.en.srt              # translate an existing .srt (no speech-to-text)
 ```
 
-## Files
+GPU use requires the CUDA 12 cuBLAS and cuDNN 9 libraries.
 
-- `index.html`, `style.css`: the page
-- `app.js`: main flow (read audio → speech-to-text → translate → save), like `main()` in the script
-- `whisper-worker.js`: speech-to-text in a background thread
-- `hindi_subs.js`: SRT helpers and Hindi translation, ported from the script
-- `hindi_subs.py`: the original command-line script
-- `vendor/ffmpeg/`: ffmpeg.wasm (MIT), served from this site so its worker can start
-- `coi-serviceworker.js`: [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) (MIT); lets speech-to-text use all CPU cores on GitHub Pages
+## Project structure
 
-No build step. To run locally, serve the folder with any static server (for example `python -m http.server`) and open `http://localhost:8000`.
+```
+index.html                     Web app
+assets/
+  css/styles.css               Styles (light and dark)
+  js/main.js                   App flow: read audio → transcribe → translate → save
+  js/transcriber.worker.js     Whisper speech recognition in a Web Worker
+  js/srt.js                    SRT parsing, writing and line splitting
+  js/translate.js              Batched Google Translate client
+  fonts/                       Inter (SIL Open Font License)
+  vendor/ffmpeg/               ffmpeg.wasm (MIT)
+coi-serviceworker.js           Enables multi-threaded WASM on GitHub Pages (MIT)
+cli/hindi_subtitles.py         Command-line tool
+```
+
+## Local development
+
+No build step. Serve the folder with any static server and open it on `localhost`:
+
+```
+python -m http.server 8000
+```
+
+## Acknowledgements
+
+[Whisper](https://github.com/openai/whisper) ·
+[transformers.js](https://github.com/huggingface/transformers.js) ·
+[ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) ·
+[coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) ·
+[Inter](https://github.com/rsms/inter)

@@ -11,11 +11,11 @@ Install (Python 3.9+, no ffmpeg needed):
   pip install faster-whisper deep-translator
 
 Use:
-  python hindi_subs.py movie.mp4                 # audio -> Hindi subtitles
-  python hindi_subs.py movie.mp4 --lang ja       # set audio language if auto-detect is wrong
-  python hindi_subs.py movie.mp4 --model small   # much faster on CPU, less accurate
-  python hindi_subs.py movie.mkv --track 1       # use the 2nd audio track (dual-audio files)
-  python hindi_subs.py movie.en.srt              # translate an existing .srt (no speech-to-text)
+  python cli/hindi_subtitles.py movie.mp4                 # audio -> Hindi subtitles
+  python cli/hindi_subtitles.py movie.mp4 --lang ja       # set audio language if auto-detect is wrong
+  python cli/hindi_subtitles.py movie.mp4 --model small   # much faster on CPU, less accurate
+  python cli/hindi_subtitles.py movie.mkv --track 1       # use the 2nd audio track (dual-audio files)
+  python cli/hindi_subtitles.py movie.en.srt              # translate an existing .srt (no speech-to-text)
 """
 import argparse
 import os
