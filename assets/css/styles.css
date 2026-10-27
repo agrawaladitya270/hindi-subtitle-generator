@@ -129,6 +129,7 @@ select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0
 select:disabled { opacity: .55; cursor: default; }
 
 .device { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.switches { display: flex; flex-wrap: wrap; gap: 10px 24px; }
 .switch { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; user-select: none; }
 .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .knob { position: relative; width: 34px; height: 20px; border-radius: 99px; background: var(--border-strong); transition: background-color .15s; }

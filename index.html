@@ -53,7 +53,11 @@
         <label class="field"><span>Audio track</span><select id="track"></select></label>
       </div>
       <div class="device">
-        <label class="switch" id="gpuswitch"><input type="checkbox" id="gpu"><span class="knob"></span>GPU acceleration</label>
+        <div class="switches">
+          <label class="switch" title="Whisper writes English straight from the speech, then English is translated to Hindi. Clearer Hindi for most languages.">
+            <input type="checkbox" id="via"><span class="knob"></span>Translate via English</label>
+          <label class="switch" id="gpuswitch"><input type="checkbox" id="gpu"><span class="knob"></span>GPU acceleration</label>
+        </div>
         <span class="chip" id="device"></span>
       </div>
     </div>

@@ -6,23 +6,26 @@ Generate Hindi subtitles (`.srt`) for any movie, in the browser or from the comm
 
 ## Features
 
-- **Private by design.** Speech recognition runs locally in the browser; the movie is never uploaded. Only subtitle text is sent to Google Translate.
-- **Whisper speech recognition** with four model sizes (Small, Medium, Large v3 Turbo, Large v3), GPU-accelerated through WebGPU with automatic CPU fallback.
+- **Free and open source.** Speech recognition (OpenAI Whisper) runs locally in the browser; the movie is never uploaded. Only subtitle text is sent to Google Translate.
+- **Translate via English (default).** Whisper writes English directly from the speech, which is then translated to Hindi. For languages Whisper spells poorly (Telugu, Tamil, Kannada, …) this gives far clearer Hindi than translating its native-script transcript.
+- **Sentence-level translation.** Subtitle fragments are joined into sentences before translation, then spread back over their original timing.
+- **Whisper models:** Small, Medium, Large v3 Turbo, Large v3, GPU-accelerated through WebGPU with automatic CPU fallback. (Turbo transcribes only; it cannot translate to English.)
 - **Any movie file.** MP4, MKV, AVI, MP3 and more via ffmpeg.wasm, including multi-track audio and AC-3.
 - **Existing subtitles.** Drop an `.srt` to translate it directly.
-- **Player-ready output.** Two lines per cue, 42 characters per line, UTF-8 with BOM. The original-language `.srt` is saved as well.
+- **Player-ready output.** Two lines per cue, 42 characters per line, UTF-8 with BOM. The intermediate `.srt` (English or the spoken language) is saved too, so translation can be redone without speech recognition.
 
 ## How it works
 
-1. Whisper transcribes the selected audio track into timed lines in the spoken language.
-2. Each line is translated to Hindi with Google Translate.
-3. The result is saved as `<movie>.hi.srt`, alongside `<movie>.<lang>.srt`.
+1. Whisper turns the selected audio track into timed English lines (or, with *Translate via English* off, lines in the spoken language).
+2. Lines are joined into sentences and translated to Hindi with Google Translate.
+3. The result is saved as `<movie>.hi.srt`, alongside `<movie>.en.srt` (or `<movie>.<lang>.srt`).
 
 ## Performance
 
 | Hardware | Model | 2-hour movie |
 |---|---|---|
-| Dedicated GPU (RTX 4060 Laptop) | Large v3 Turbo | ~10 min (~12× real time) |
+| Dedicated GPU (RTX 4060 Laptop) | Large v3, via English | ~35 min (~3.7× real time) |
+| Dedicated GPU (RTX 4060 Laptop) | Large v3 Turbo, direct | ~10 min (~12× real time) |
 | Integrated GPU (Intel UHD) | Small | ~40 min (~3× real time) |
 | CPU only | Small | several hours |
 

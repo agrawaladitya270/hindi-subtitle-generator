@@ -121,14 +121,16 @@ async function detectLanguage(audio, wins) {
 }
 
 function clean(text) {
-  text = text.replace(/\s+/g, " ").trim();
-  text = text.replace(/(.{2,40}?)(?:[\s,.!?]*\1){5,}/gu, "$1");  // "go go go go go go go..." loops
+  text = text.replace(/�/g, "").replace(/\s+/g, " ").trim();  // broken characters at cut-off tokens
+  // Whisper loops: a phrase said 3+ times in a row, or a short word 6+ times, is kept once
+  text = text.replace(/(.{6,80}?)(?:[\s,.!?।]*\1){2,}/gu, "$1").replace(/(.{2,5}?)(?:[\s,.!?।]*\1){5,}/gu, "$1");
   return /\p{L}/u.test(text) ? text : "";  // drop lines with no words (♪, ...)
 }
 
 // Transcribe one piece of the movie (Int16 PCM). The last window of a piece is held back and
 // joined to the next piece, so no sentence is cut at a piece boundary.
-async function transcribePiece({ pcm, start, lang, final }) {
+// task "translate" makes Whisper write English directly from the speech.
+async function transcribePiece({ pcm, start, lang, task = "transcribe", final }) {
   const fresh = Float32Array.from(pcm, (x) => x / 32768);
   let audio = fresh, offset = start;
   if (carry) {
@@ -150,10 +152,14 @@ async function transcribePiece({ pcm, start, lang, final }) {
     language = detected = await detectLanguage(audio, wins);
     post({ type: "language", lang: language });
   }
+  if (language === "en" || language === "hi") task = "transcribe";  // nothing to gain from English
 
   const cues = [];
   for (const [a, b] of wins) {
-    const out = await asr(slice(audio, a, b), { return_timestamps: true, language, task: "transcribe" });
+    // In English mode, decode each window in one pass with a length cap. Otherwise music makes
+    // Whisper stop early, re-run the rest of the window, and repeat that dozens of times.
+    const cap = task === "translate" ? { max_new_tokens: Math.min(440, 24 + Math.round((b - a) * 6)) } : {};
+    const out = await asr(slice(audio, a, b), { return_timestamps: true, language, task, ...cap });
     for (const c of out.chunks ?? []) {
       const text = clean(c.text);
       if (!text) continue;
@@ -164,5 +170,5 @@ async function transcribePiece({ pcm, start, lang, final }) {
     }
     post({ type: "progress", at: offset + b, last: cues.at(-1)?.[2] });
   }
-  return { cues, lang: language };
+  return { cues, lang: language, task };
 }

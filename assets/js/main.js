@@ -73,7 +73,8 @@ function duration(sec) {
 function fileSize(bytes) {
   return bytes >= 1e9 ? `${(bytes / 1e9).toFixed(2)} GB` : `${Math.max(1, mb(bytes))} MB`;
 }
-function addDownload(name, blob, label, badge, main = false) {
+// main: highlighted card at the top. save: start the download right away.
+function addDownload(name, blob, label, badge, { main = false, save = main } = {}) {
   const url = URL.createObjectURL(blob);
   urls.push(url);
   const a = document.createElement("a");
@@ -87,11 +88,13 @@ function addDownload(name, blob, label, badge, main = false) {
   a.querySelector("small").textContent = label;
   if (main) $("downloads").prepend(a);
   else $("downloads").append(a);
-  if (main) a.click();
+  if (save) a.click();
 }
 const OPTIONS_KEY = "hindi-subtitle-generator:options";
 function saveOptions() {
-  try { localStorage.setItem(OPTIONS_KEY, JSON.stringify({ model: $("model").value, cpu: !$("gpu").checked })); } catch {}
+  try {
+    localStorage.setItem(OPTIONS_KEY, JSON.stringify({ model: $("model").value, cpu: !$("gpu").checked, via: $("via").checked }));
+  } catch {}
 }
 function loadOptions() {
   try { return JSON.parse(localStorage.getItem(OPTIONS_KEY)) ?? {}; } catch { return {}; }
@@ -210,7 +213,7 @@ function dtypeFor(model, device) {
   return { encoder_model: encoder, decoder_model_merged: "q4" };
 }
 
-async function transcribe(device, { model, lang, track }, signal) {
+async function transcribe(device, { model, lang, track, task }, signal) {
   const total = media.duration;
   let t0 = 0, startAt = 0;
   const whisper = new Whisper((ev) => {
@@ -244,23 +247,26 @@ async function transcribe(device, { model, lang, track }, signal) {
     const ff = await getFFmpeg();
     await mount(ff, file);
     const cues = [];
-    let detected = lang, start = 0;
+    let detected = lang, used = task, start = 0;
     let next = readPiece(ff, file, track, 0);
     for (;;) {
       const pcm = await next;
       if (start === 0 && !pcm.length) throw new Error("Could not read any audio.");
       const more = pcm.length > 0;
       if (more) next = readPiece(ff, file, track, start + PIECE);  // read ahead while Whisper works
-      const res = await whisper.call({ type: "piece", pcm, start, lang, final: !more }, [pcm.buffer]);
+      const res = await whisper.call({ type: "piece", pcm, start, lang, task, final: !more }, [pcm.buffer]);
       cues.push(...res.cues);
       detected = res.lang ?? detected;
+      used = res.task ?? used;
       if (!more) break;
       start += PIECE;
     }
     step("asr", "done");
     quote("");
-    log(`Speech-to-text: ${cues.length} lines, length ${Math.round((total || start) / 60)} min`);
-    return { cues: mergeRepeats(cues), lang: detected };
+    log(`Speech-to-text: ${cues.length} lines, length ${Math.round((total || start) / 60)} min`
+        + (used === "translate" ? ` (${detected} speech written in English)` : ""));
+    // In English mode the lines are English, whatever language was spoken.
+    return { cues: mergeRepeats(cues), lang: used === "translate" ? "en" : detected };
   } finally {
     signal.removeEventListener("abort", stop);
     whisper.terminate();
@@ -279,7 +285,8 @@ function mergeRepeats(cues) {
 }
 
 async function speechToText(signal) {
-  const opts = { model: $("model").value, lang: $("lang").value || null, track: Number($("track").value) };
+  const opts = { model: $("model").value, lang: $("lang").value || null, track: Number($("track").value),
+                 task: $("via").checked ? "translate" : "transcribe" };
   if (media.tracks.length > 1) {
     log(`Audio tracks: ${media.tracks.map((t, i) => `${i}=${t.lang}`).join(", ")}  -> using ${opts.track}`);
   }
@@ -298,13 +305,33 @@ async function speechToText(signal) {
 
 // ---------------- 2. text -> Hindi, and save ----------------
 
+// Whisper and subtitle files cut speech into fragments. Join fragments that belong to one
+// sentence (short pause, no sentence-ending punctuation) so the translator sees whole thoughts.
+function sentences(cues) {
+  const groups = [];
+  for (const [start, end, raw] of cues) {
+    const text = raw.replace(/\n/g, " ");
+    const g = groups.at(-1);
+    if (g && start - g.end <= 0.8 && !/[.!?।…]["'”’)\]]*$/.test(g.text)
+        && g.text.length + text.length <= 150 && end - g.start <= 12) {
+      g.end = end;
+      g.text += " " + text;
+    } else {
+      groups.push({ start, end, text });
+    }
+  }
+  return groups;
+}
+
 async function translateAndSave(signal) {
   const { cues, lang, base } = result;
   $("retry").hidden = true;
   step("tr", "active");
   bar(0);
   status("Translating to Hindi", "0%");
-  const texts = cues.map((c) => c[2].replace(/\n/g, " "));
+  const groups = sentences(cues);
+  const texts = groups.map((g) => g.text);
+  log(`Translating ${groups.length} sentences (from ${cues.length} lines)`);
   let hindi;
   try {
     hindi = lang === "hi" ? texts : await translateToHindi(texts, {
@@ -317,26 +344,26 @@ async function translateAndSave(signal) {
     throw new Error(`${e.message}. Transcription is kept; retry in a few minutes.`);
   }
   const final = [];
-  cues.forEach(([start, end], k) => final.push(...splitCue(start, end, hindi[k])));
+  groups.forEach((g, k) => final.push(...splitCue(g.start, g.end, hindi[k])));
   const name = `${base}.hi.srt`;
-  addDownload(name, srtBlob(final), `Hindi · ${num(final.length)} subtitles`, "HI", true);
+  addDownload(name, srtBlob(final), `Hindi · ${num(final.length)} subtitles`, "HI", { main: true });
   step("tr", "done");
   bar(1);
   status("Complete", `${num(final.length)} subtitles`);
   log(`Done: ${name}  (${final.length} subtitles)`);
-  showPreview(cues, hindi);
+  showPreview(groups, hindi);
 }
 
-function showPreview(cues, hindi) {
+function showPreview(groups, hindi) {
   const rows = $("rows");
   rows.textContent = "";
-  cues.slice(0, 500).forEach(([start], k) => {
+  groups.slice(0, 500).forEach((g, k) => {
     const tr = rows.insertRow();
-    tr.insertCell().textContent = fmtTime(start).slice(0, 8);
-    tr.insertCell().textContent = cues[k][2];
+    tr.insertCell().textContent = fmtTime(g.start).slice(0, 8);
+    tr.insertCell().textContent = g.text;
     tr.insertCell().textContent = hindi[k];
   });
-  $("count").textContent = cues.length > 500 ? `First 500 of ${num(cues.length)} lines` : `${num(cues.length)} lines`;
+  $("count").textContent = groups.length > 500 ? `First 500 of ${num(groups.length)} sentences` : `${num(groups.length)} sentences`;
   $("preview").hidden = false;
 }
 
@@ -372,7 +399,7 @@ async function run(retryTranslation = false) {
       if (!cues.length) throw new Error("No speech or subtitles found.");
       result = { cues, lang, base };
       if (lang) {  // offer original-language subtitles first, so this slow step is never lost
-        addDownload(`${base}.${lang}.srt`, srtBlob(cues), `${LANG_NAME[lang] ?? lang} · ${num(cues.length)} lines`, lang);
+        addDownload(`${base}.${lang}.srt`, srtBlob(cues), `${LANG_NAME[lang] ?? lang} · ${num(cues.length)} lines`, lang, { save: true });
         log(`Saved original-language subtitles: ${base}.${lang}.srt`);
       }
     }
@@ -402,6 +429,7 @@ function setBusy(busy) {
   $("change").disabled = busy;
   for (const id of ["model", "lang", "track"]) $(id).disabled = busy;
   $("gpu").disabled = busy || !gpu;
+  $("via").disabled = busy;
   $("track").disabled ||= !media || media.tracks.length < 2;
 }
 
@@ -452,13 +480,20 @@ async function chooseFile(f) {
 
 function modelOptions() {
   const k = gpu && $("gpu").checked ? (gpu.f16 ? 0 : 1) : 2;
-  const current = $("model").value;
+  const via = $("via").checked;
+  let current = $("model").value || "large-v3-turbo";
   $("model").innerHTML = "";
   for (const id of Object.keys(MODELS)) {
     const size = MODEL_MB[id][k];
-    $("model").add(new Option(`${MODEL_LABELS[id]} · ${size >= 1000 ? (size / 1000).toFixed(1) + " GB" : size + " MB"}`, id));
+    // Turbo was trained only to transcribe, so it can't write English from other languages.
+    const off = via && id === "large-v3-turbo";
+    const opt = new Option(`${MODEL_LABELS[id]} · ${size >= 1000 ? (size / 1000).toFixed(1) + " GB" : size + " MB"}`
+                           + (off ? " · not with English" : ""), id);
+    opt.disabled = off;
+    $("model").add(opt);
   }
-  $("model").value = current || "large-v3-turbo";
+  if (via && current === "large-v3-turbo") current = gpu ? "large-v3" : "small";
+  $("model").value = current;
   const vendor = gpu?.vendor ? gpu.vendor[0].toUpperCase() + gpu.vendor.slice(1) : "";
   const onGpu = gpu && $("gpu").checked;
   $("device").textContent = onGpu ? `GPU${vendor ? ` · ${vendor}` : ""}` : gpu ? "CPU" : "CPU · WebGPU unavailable";
@@ -474,7 +509,8 @@ async function init() {
   const saved = loadOptions();
   $("gpu").checked = !!gpu && !saved.cpu;
   $("gpu").disabled = !gpu;
-  $("model").innerHTML = `<option value="${saved.model in MODELS ? saved.model : gpu ? "large-v3-turbo" : "small"}"></option>`;
+  $("via").checked = saved.via ?? true;
+  $("model").innerHTML = `<option value="${saved.model in MODELS ? saved.model : gpu ? "large-v3" : "small"}"></option>`;
   modelOptions();
 
   $("file").addEventListener("change", () => chooseFile($("file").files[0]));
@@ -493,6 +529,7 @@ async function init() {
     chooseFile(e.dataTransfer.files[0]);
   });
   $("gpu").addEventListener("change", () => { modelOptions(); saveOptions(); });
+  $("via").addEventListener("change", () => { modelOptions(); saveOptions(); });
   $("model").addEventListener("change", saveOptions);
   $("start").addEventListener("click", () => run());
   $("retry").addEventListener("click", () => run(true));
